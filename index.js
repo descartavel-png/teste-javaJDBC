@@ -2,10 +2,12 @@ import express from "express";
 import axios from "axios";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
+app.use(cors());
 app.use(bodyParser.json({ limit: "10mb" })); // aumenta limite de payload
 
 // Função simples de resumo de mensagens antigas
