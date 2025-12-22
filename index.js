@@ -31,13 +31,16 @@ app.post("/v1/chat/completions", async (req, res) => {
     const summary = await summarizeMessages(oldMessages);
 
     const payload = {
-      model: "deepseek-ai/deepseek-r1-0528",
-      input: [
-        { role: "system", content: summary },
-        ...lastMessages
-      ]
-    };
-
+  model: "deepseek-ai/deepseek-r1", // Verifique se este ID exato está no seu catálogo
+  messages: [
+    { role: "system", content: `Contexto anterior: ${summary}` },
+    ...lastMessages
+  ],
+  // Em vez de tirar, coloque um valor alto
+  max_tokens: 16384, 
+  temperature: 0.6, // O R1 performa melhor entre 0.5 e 0.7
+  top_p: 0.95
+};
     const response = await axios.post(
       process.env.NVIDIA_API_URL,
       payload,
@@ -52,8 +55,11 @@ app.post("/v1/chat/completions", async (req, res) => {
     res.json(response.data);
 
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).json({ error: "Erro interno" });
+    console.error("ERRO DA NVIDIA:", err.response?.data || err.message);
+    res.status(500).json({ 
+      error: "Erro na NVIDIA", 
+      detalhes: err.response?.data?.body?.detail || err.message 
+    });
   }
 });
 
