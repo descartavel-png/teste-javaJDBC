@@ -31,7 +31,7 @@ app.post("/v1/chat/completions", async (req, res) => {
     const summary = await summarizeMessages(oldMessages);
 
     const payload = {
-  model: "deepseek-ai/deepseek-r1", // Verifique se este ID exato está no seu catálogo
+  model: "deepseek-ai/deepseek-r1-0528", // Verifique se este ID exato está no seu catálogo
   messages: [
     { role: "system", content: `Contexto anterior: ${summary}` },
     ...lastMessages
