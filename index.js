@@ -40,6 +40,7 @@ app.post("/v1/chat/completions", async (req, res) => {
       top_p: 0.95
     };
 
+    // Pega a resposta da NVIDIA
     const response = await axios.post(
       process.env.NVIDIA_API_URL,
       payload,
@@ -51,26 +52,36 @@ app.post("/v1/chat/completions", async (req, res) => {
       }
     );
 
-    // --- INÍCIO DA LIMPEZA DO <THINK> ---
+    // 1. Criamos uma cópia dos dados para não dar erro de referência
     let responseData = response.data;
 
-    if (responseData.choices && responseData.choices[0].message.content) {
-      let textoOriginal = response.data.choices[0].message.content;
+    // 2. Localizamos onde está o texto (normalmente em choices[0].message.content)
+    if (responseData.choices && responseData.choices[0]) {
+      let message = responseData.choices[0].message;
+      let content = message.content || "";
 
-      // Remove o bloco <think>...</think> completo
-      // O regex [\s\S]*? garante que pegue quebras de linha e seja "lazy" (pare no primeiro </think>)
-      let textoLimpo = textoOriginal.replace(/<think>[\s\S]*?<\/think>/g, "");
+      console.log("--- TEXTO RECEBIDO ---");
+      console.log(content.substring(0, 100) + "..."); // Isso vai mostrar no seu terminal se o <think> chegou
 
-      // Caso o modelo tenha sido cortado antes de fechar a tag </think>
-      textoLimpo = textoLimpo.replace(/<think>[\s\S]*/g, "");
+      // 3. REMOÇÃO AGRESSIVA:
+      // Remove o bloco completo <think>...</think>
+      content = content.replace(/<think>[\s\S]*?<\/think>/gi, "");
+      
+      // Remove tags <think> ou </think> que sobraram sozinhas
+      content = content.replace(/<\/?think>/gi, "");
+      
+      // Remove qualquer coisa que tenha sobrado se o modelo foi cortado no meio do pensamento
+      content = content.replace(/^[\s\S]*?<\/think>/gi, ""); 
 
-      // Remove espaços vazios extras que sobram no início ou fim
-      responseData.choices[0].message.content = textoLimpo.trim();
+      // 4. Devolve o texto limpo para o objeto
+      responseData.choices[0].message.content = content.trim();
+      
+      console.log("--- TEXTO LIMPO ---");
+      console.log(responseData.choices[0].message.content.substring(0, 100));
     }
-    // --- FIM DA LIMPEZA ---
 
+    // Envia para o Janitor AI
     res.json(responseData);
-
   } catch (err) {
     console.error("ERRO DA NVIDIA:", err.response?.data || err.message);
     res.status(500).json({ 
@@ -79,6 +90,7 @@ app.post("/v1/chat/completions", async (req, res) => {
     });
   }
 });
+
 app.listen(process.env.PORT || 3000, () => {
   console.log(`API rodando na porta ${process.env.PORT || 3000}`);
 });
