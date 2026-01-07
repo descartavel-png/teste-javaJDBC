@@ -27,20 +27,19 @@ app.post("/v1/chat/completions", async (req, res) => {
 
     const lastMessages = messages.slice(-50);
     const oldMessages = messages.slice(0, -50);
-
     const summary = await summarizeMessages(oldMessages);
 
     const payload = {
-  model: "deepseek-ai/deepseek-r1-0528", // Verifique se este ID exato está no seu catálogo
-  messages: [
-    { role: "system", content: `Contexto anterior: ${summary}` },
-    ...lastMessages
-  ],
-  // Em vez de tirar, coloque um valor alto
-  max_tokens: 16384, 
-  temperature: 0.6, // O R1 performa melhor entre 0.5 e 0.7
-  top_p: 0.95
-};
+      model: "deepseek-ai/deepseek-r1-0528",
+      messages: [
+        { role: "system", content: `Contexto anterior: ${summary}` },
+        ...lastMessages
+      ],
+      max_tokens: 16384, 
+      temperature: 0.6,
+      top_p: 0.95
+    };
+
     const response = await axios.post(
       process.env.NVIDIA_API_URL,
       payload,
@@ -52,7 +51,25 @@ app.post("/v1/chat/completions", async (req, res) => {
       }
     );
 
-    res.json(response.data);
+    // --- INÍCIO DA LIMPEZA DO <THINK> ---
+    let responseData = response.data;
+
+    if (responseData.choices && responseData.choices[0].message.content) {
+      let textoOriginal = response.data.choices[0].message.content;
+
+      // Remove o bloco <think>...</think> completo
+      // O regex [\s\S]*? garante que pegue quebras de linha e seja "lazy" (pare no primeiro </think>)
+      let textoLimpo = textoOriginal.replace(/<think>[\s\S]*?<\/think>/g, "");
+
+      // Caso o modelo tenha sido cortado antes de fechar a tag </think>
+      textoLimpo = textoLimpo.replace(/<think>[\s\S]*/g, "");
+
+      // Remove espaços vazios extras que sobram no início ou fim
+      responseData.choices[0].message.content = textoLimpo.trim();
+    }
+    // --- FIM DA LIMPEZA ---
+
+    res.json(responseData);
 
   } catch (err) {
     console.error("ERRO DA NVIDIA:", err.response?.data || err.message);
@@ -62,7 +79,6 @@ app.post("/v1/chat/completions", async (req, res) => {
     });
   }
 });
-
 app.listen(process.env.PORT || 3000, () => {
   console.log(`API rodando na porta ${process.env.PORT || 3000}`);
 });
