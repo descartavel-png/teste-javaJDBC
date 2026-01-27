@@ -1,3 +1,4 @@
+
 import express from "express";
 import axios from "axios";
 import bodyParser from "body-parser";
@@ -30,7 +31,7 @@ app.post("/v1/chat/completions", async (req, res) => {
     const summary = await summarizeMessages(oldMessages);
 
     const payload = {
-      model: "minimaxai/minimax-m2",
+      model: "moonshotai/kimi-k2-thinking",
       messages: [
         { role: "system", content: `Contexto anterior: ${summary}` },
         ...lastMessages
