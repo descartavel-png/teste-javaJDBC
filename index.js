@@ -30,7 +30,7 @@ app.post("/v1/chat/completions", async (req, res) => {
     const summary = await summarizeMessages(oldMessages);
 
     const payload = {
-      model: "deepseek-ai/deepseek-r1-0528",
+      model: "minimaxai/minimax-m2",
       messages: [
         { role: "system", content: `Contexto anterior: ${summary}` },
         ...lastMessages
